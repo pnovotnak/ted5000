@@ -1,0 +1,98 @@
+<?php if ( ! defined('BASEPATH')) exit('No direct script access allowed');
+
+class ted extends CI_Controller {
+
+  public function index()
+  {
+    $this->load->view('ted_index');
+  }
+
+
+  /* @data()
+  Takes:
+    • Gateway is the hardware identifier (Serial Number) of the unit making the request
+    • Unique is the unique identifier that was supplied in step 2. This is optional and is meant
+      as an extra security token to be provided to the 3rd party service if they wish to use it.
+
+  Returns:
+    • PostServer- The ip address or dns resolvable name of the server (80 character max)
+    • PostPort - the port that the server is running on
+    • PostURL - the path of the service receiving the post (80 character max)
+    • UseSSL - whether or not to post data via SSL
+    • AuthToken- Unique token provided by the 3rd party used to as an authentication
+      mechanism when data is submitted by the TED5000 (optional) (20 character max)
+    • PostRate - The number of minutes between data posts. (1 - 15)
+    • HighPrec – Enables/disables “High Precision” mode. A value of “T” enables High
+      Precision mode which will include fractional watt-hours. Any other value will floor each
+      value to the nearest watt hour.
+
+  Example input:
+    <ted5000Activation>
+      <Gateway>210000</Gateway>
+      <Unique>123456</Unique>
+    </ted5000Activation>
+
+  Example output:
+    <ted500ActivationResponse>
+      <PostServer>www.theenergydetective.com</PostServer>
+      <UseSSL>T</UseSSL>
+      <PostPort>443</PostPort>
+      <PostURL>/postdata.cgi</PostURL>
+      <AuthToken>MySecurityToten</AuthToken>
+      <PostRate>10</PostRate>
+      <HighPrec>T</HighPrec>
+    </ted500ActivationResponse>
+  */
+  public function activate()
+  {
+    $this->output->set_content_type('text/xml');
+
+    $gateway = $this->input->post('Gateway');
+    $unique = $this->input->post('Unique');
+
+    $xml = new SimpleXMLElement('<ted500ActivationResponse/>');
+    $xml->addChild('PostServer', '[this-server]');
+    $xml->addChild('UseSSL', 'F');
+    $xml->addChild('PostPort', '[this-server]');
+    $xml->addChild('PostURL', 'ted/data');
+    $xml->addChild('AuthToken', '');
+    $xml->addChild('PostRate', '1');
+    $xml->addChild('HighPrec', 'T');
+
+    print $xml->asXML();
+  }
+
+
+  /* @data()
+  Takes:
+    • ID: the unique hardware id of the MTU
+    • TYPE: the configuration type of the MTU
+    • Timestamp: the "Unix Epoch" based timestamp of the reading.
+    • Watts: the cumulative reading in watt hours by the MTU (since its creation) at the specified
+      timestamp. Fractional Watt-Hours are represented as a decimal value up to 4 digits of
+      precision.
+    • Rate: The “rate in effect” when the reading was made (based on GW Utility configuration).
+
+  Returns:
+    HTTP 200 code if successful. Any code >= 300 will be considered to be an error code.
+
+  Example input:
+    <ted5000 GWID="200000" auth="MySecurityToken">
+      <MTU ID=100000 type="0">
+        <cumulative timestamp="123456000" watts="10000" rate="0.12345"/>
+        <cumulative timestamp="123456060" watts="10005" rate="0.12345"/>
+        <cumulative timestamp="123456120" watts="10010" rate="0.12345"/>
+      </MTU>
+      <MTU ID=100001 type="0">
+        <cumulative timestamp="123456000" watts="10000" rate="0.12345"/>
+        <cumulative timestamp="123456060" watts="10005" rate="0.12345"/>
+        <cumulative timestamp="123456120" watts="10010" rate="0.12345"/>
+      </MTU>
+    </ted5000>
+  */
+  public function data()
+  {}
+}
+
+/* End of file ted.php */
+/* Location: ./application/controllers/ted.php */
