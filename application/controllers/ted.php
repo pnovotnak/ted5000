@@ -1,14 +1,72 @@
 <?php if ( ! defined('BASEPATH')) exit('No direct script access allowed');
 
-class ted extends CI_Controller {
+class Ted extends CI_Controller {
 
+  /*
+  Takes:
+    • [optionally] a length
+
+  Returns:
+    • A psudorandom string of $length
+  */
+  function generateRandomString($length = 10) {
+    $characters = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    $randomString = '';
+    for ($i = 0; $i < $length; $i++) {
+        $randomString .= $characters[rand(0, strlen($characters) - 1)];
+    }
+    return $randomString;
+  }
+
+  /*
+  Takes:
+    • [optionally] a length
+
+  Returns:
+    • A (hopefully) unique identifier
+  */
+  function generateUUID($length = 20) {
+    $time = microtime();
+    $salt = $generateRandomString(20);
+    $hash = md5($time . $salt);
+    // If the hash string is under 20 chars, pad it
+    if($hash < $length){
+      $padding = $length - strlen($hash);
+      $uuid = $hash . generateRandomString($padding);
+    } // It it's over 20 chars, cut it down
+    elseif($hash > $length){
+      $cut = strlen($hash) - $length;
+      $uuid = substr($hash, $cut);
+    } // If it's exactly 20 chars, leave it alone
+    else {
+      $uuid = $hash;
+    }
+    return $uuid;
+  }
+
+
+  /*
+  Takes:
+    nothing
+  Returns:
+    A user-friendly page.
+  */
   public function index()
   {
     $this->load->view('ted_index');
   }
 
 
-  /* @data()
+  public function getuuid()
+  {
+    $data = array(
+      'uuid'=> generateUUID(20)
+    );
+
+    $this->parser->parse('ted_get_uuid', $data);
+  }
+
+  /*
   Takes:
     • Gateway is the hardware identifier (Serial Number) of the unit making the request
     • Unique is the unique identifier that was supplied in step 2. This is optional and is meant
@@ -45,25 +103,39 @@ class ted extends CI_Controller {
   */
   public function activate()
   {
-    $this->output->set_content_type('text/xml');
+    // Set up vars
+    $PostServer = "http://" . $_SERVER['SERVER_NAME'];
+    $PostPort = $_SERVER['SERVER_PORT'];
+    $PostURL = '/ted/data';
+    if (empty($_SERVER['HTTPS'])) {
+      $UseSSL = "F";
+    } else {
+      $UseSSL = "T";
+    }
+    $AuthToken = generateUUID(20);
+    $PostRate = "1";
+    $HighPrec = "T";
 
+    // Set up response
+    $this->output->set_content_type('text/xml');
     $gateway = $this->input->post('Gateway');
     $unique = $this->input->post('Unique');
 
+    // Generate output
     $xml = new SimpleXMLElement('<ted500ActivationResponse/>');
-    $xml->addChild('PostServer', '[this-server]');
-    $xml->addChild('UseSSL', 'F');
-    $xml->addChild('PostPort', '[this-server]');
-    $xml->addChild('PostURL', 'ted/data');
-    $xml->addChild('AuthToken', '');
-    $xml->addChild('PostRate', '1');
-    $xml->addChild('HighPrec', 'T');
+    $xml->addChild('PostServer', $server_url);
+    $xml->addChild('UseSSL', $UseSSL);
+    $xml->addChild('PostPort', $PostPort);
+    $xml->addChild('PostURL', $PostURL);
+    $xml->addChild('AuthToken', $AuthToken);
+    $xml->addChild('PostRate', $PostRate);
+    $xml->addChild('HighPrec', $HighPrec);
 
     print $xml->asXML();
   }
 
 
-  /* @data()
+  /*
   Takes:
     • ID: the unique hardware id of the MTU
     • TYPE: the configuration type of the MTU
@@ -91,7 +163,11 @@ class ted extends CI_Controller {
     </ted5000>
   */
   public function data()
-  {}
+  {
+    $outp = fopen("~/ted-data/xml/xmlfile." . date("YmdHis") . ".xml", "w");
+    fwrite($outp, $HTTP_RAW_POST_DATA);
+    fclose($outp);
+  }
 }
 
 /* End of file ted.php */
