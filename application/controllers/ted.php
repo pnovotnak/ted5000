@@ -9,7 +9,7 @@ class Ted extends CI_Controller {
   Returns:
     • A psudorandom string of $length
   */
-  function generateRandomString($length = 10) {
+  private function _generateRandomString($length = 10) {
     $characters = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
     $randomString = '';
     for ($i = 0; $i < $length; $i++) {
@@ -25,14 +25,14 @@ class Ted extends CI_Controller {
   Returns:
     • A (hopefully) unique identifier
   */
-  function generateUUID($length = 20) {
+  private function _generateUUID($length = 20) {
     $time = microtime();
-    $salt = $generateRandomString(20);
+    $salt = $this->_generateRandomString(20);
     $hash = md5($time . $salt);
     // If the hash string is under 20 chars, pad it
     if($hash < $length){
       $padding = $length - strlen($hash);
-      $uuid = $hash . generateRandomString($padding);
+      $uuid = $hash . $this->_generateRandomString($padding);
     } // It it's over 20 chars, cut it down
     elseif($hash > $length){
       $cut = strlen($hash) - $length;
@@ -48,23 +48,32 @@ class Ted extends CI_Controller {
   /*
   Takes:
     nothing
+
+  Returns:
+    A uuid
+  */
+  public function getuuid()
+  {
+    $uuid = $this->_generateUUID(20);
+    $data = array(
+      'uuid'=> $uuid
+    );
+
+    $this->load->view('ted/get_uuid', $data);
+  }
+
+
+  /*
+  Takes:
+    nothing
   Returns:
     A user-friendly page.
   */
   public function index()
   {
-    $this->load->view('ted_index');
+    $this->load->view('ted/ted');
   }
 
-
-  public function getuuid()
-  {
-    $data = array(
-      'uuid'=> generateUUID(20)
-    );
-
-    $this->parser->parse('ted_get_uuid', $data);
-  }
 
   /*
   Takes:
@@ -103,6 +112,11 @@ class Ted extends CI_Controller {
   */
   public function activate()
   {
+    // Set up response
+    $this->output->set_content_type('text/xml');
+    $gateway = $this->input->post('Gateway');
+    $unique = $this->input->post('Unique');
+
     // Set up vars
     $PostServer = "http://" . $_SERVER['SERVER_NAME'];
     $PostPort = $_SERVER['SERVER_PORT'];
@@ -112,18 +126,13 @@ class Ted extends CI_Controller {
     } else {
       $UseSSL = "T";
     }
-    $AuthToken = generateUUID(20);
+    $AuthToken = $this->_generateUUID(20);
     $PostRate = "1";
     $HighPrec = "T";
 
-    // Set up response
-    $this->output->set_content_type('text/xml');
-    $gateway = $this->input->post('Gateway');
-    $unique = $this->input->post('Unique');
-
     // Generate output
     $xml = new SimpleXMLElement('<ted500ActivationResponse/>');
-    $xml->addChild('PostServer', $server_url);
+    $xml->addChild('PostServer', $PostServer);
     $xml->addChild('UseSSL', $UseSSL);
     $xml->addChild('PostPort', $PostPort);
     $xml->addChild('PostURL', $PostURL);
